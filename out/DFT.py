@@ -1,20 +1,18 @@
 import sys
 from PIL import Image
 import numpy as np
+import glob
 
-baseFileName = sys.argv[1]
-fileCount = int(sys.argv[2])
-outFileName = baseFileName + ".mag.png"
+for fileName in glob.glob('*.png'):
 
-result = None
+    if fileName.endswith(".mag.png"):
+        continue
 
-# for each image
-for i in range(fileCount):
+    print(fileName)
+
+    outFileName = fileName[:-4] + ".mag.png"
 
     # load the image
-    fileName = baseFileName + str(i) + ".png"
-    if fileCount == 1:
-        fileName = baseFileName + ".png"
     im = np.array(Image.open(fileName), dtype=float) / 255.0
     #im = im * 2.0 - 1.0
     # print(im.shape)
@@ -24,20 +22,14 @@ for i in range(fileCount):
     dft[0,0] = 0.0
     dft = np.fft.fftshift(dft)
 
-    # average
-    if result is None:
-        result = dft
+    # log and normalize
+    imOut = dft #np.log(1+dft)
+    themin = np.min(imOut)
+    themax = np.max(imOut)
+    if themin != themax:
+        imOut = (imOut - themin) / (themax - themin)
     else:
-        alpha = 1.0 / float(i+1)
-        result = result * (1.0 - alpha) + dft * alpha
+        imOut = imOut
 
-# log and normalize
-imOut = result #np.log(1+result)
-themin = np.min(imOut)
-themax = np.max(imOut)
-if themin != themax:
-    imOut = (imOut - themin) / (themax - themin)
-else:
-    imOut = imOut
-
-Image.fromarray((imOut*255.0).astype(np.uint8), mode="L").save(outFileName)
+    # save
+    Image.fromarray((imOut*255.0).astype(np.uint8), mode="L").save(outFileName)
